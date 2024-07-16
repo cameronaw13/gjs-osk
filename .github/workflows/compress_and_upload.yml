@@ -61,30 +61,30 @@ jobs:
         asset_name: gjsosk@vishram1123_main.zip
         asset_content_type: application/zip
 
-    - name: Checkout pre-45 branch
-      uses: actions/checkout@v2
-      with:
-        ref: 'pre-45'
+    # - name: Checkout pre-45 branch
+    #   uses: actions/checkout@v2
+    #   with:
+    #     ref: 'pre-45'
         
-    - name: Compile schemas
-      run: | 
-        cd gjsosk@vishram1123.com/schemas && glib-compile-schemas .
+    # - name: Compile schemas
+    #   run: | 
+    #     cd gjsosk@vishram1123.com/schemas && glib-compile-schemas .
     
-    - name: Replace autorelease version name
-      run: |
-        sed -i gjsosk@vishram1123.com/prefs.js -e 's|{{VERSION}}|${{ env.hash }}|g'
+    # - name: Replace autorelease version name
+    #   run: |
+    #     sed -i gjsosk@vishram1123.com/prefs.js -e 's|{{VERSION}}|${{ env.hash }}|g'
 
-    - name: Compress directory (pre-45)
-      run: |
-        cd gjsosk@vishram1123.com && zip -r ../gjsosk@vishram1123_pre-45.zip ./*
+    # - name: Compress directory (pre-45)
+    #   run: |
+    #     cd gjsosk@vishram1123.com && zip -r ../gjsosk@vishram1123_pre-45.zip ./*
 
-    - name: Upload Release Asset (pre-45)
-      id: upload-release-asset-pre-45
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./gjsosk@vishram1123_pre-45.zip
-        asset_name: gjsosk@vishram1123_pre-45.zip
-        asset_content_type: application/zip
+    # - name: Upload Release Asset (pre-45)
+    #   id: upload-release-asset-pre-45
+    #   uses: actions/upload-release-asset@v1
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #   with:
+    #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+    #     asset_path: ./gjsosk@vishram1123_pre-45.zip
+    #     asset_name: gjsosk@vishram1123_pre-45.zip
+    #     asset_content_type: application/zip
