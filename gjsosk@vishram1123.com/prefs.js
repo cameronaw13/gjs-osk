@@ -64,7 +64,7 @@ export default class GjsOskPreferences extends ExtensionPreferences {
 		});
 		behaviorGroup.add(layoutRow);
 
-		let layoutList = ["Full Sized International", "Full Sized US", "Tenkeyless International", "Tenkeyless US", "Compact International", "Compact US", "Split International", "Split US"];
+		let layoutList = ["Full Sized International", "Full Sized US", "Tenkeyless International", "Tenkeyless US", "Compact International", "Compact US", "Split International", "Split US", "Compact US V2"];
 		let layoutDrop = Gtk.DropDown.new_from_strings(layoutList);
 		layoutDrop.valign = Gtk.Align.CENTER;
 		layoutDrop.selected = settings.get_int("layout");
