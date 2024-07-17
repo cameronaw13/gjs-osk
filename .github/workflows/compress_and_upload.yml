@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - pre-45
+      # - pre-45
     paths-ignore:
       - '/README.md'
 
