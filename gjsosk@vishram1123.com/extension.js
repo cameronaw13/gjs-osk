@@ -747,9 +747,30 @@ class Keyboard extends Dialog {
             this.nonDragBlocker = null;
         }
 
-        const grid = this.box.layout_manager
-        grid.set_row_homogeneous(true)
-        grid.set_column_homogeneous(!layoutName.includes("Split"))
+		let currentLayout = layouts[layoutName];
+		let numRows = 0;
+		let colSize = 0.625;
+		let numCols = 0;
+		let rowSize = 0;
+		let numHalf = 0;
+		let halfSize = 0;
+		for (const r of currentLayout) {
+			numRows += (!Object.hasOwn(r[0], "key") && Object.hasOwn(r[0], "height") ? r[0].height : 1)
+			colSize += (Object.hasOwn(r[0], "height") ? r[0].height : 1)
+		}
+		for (const c of currentLayout[0]) {
+			if (Object.hasOwn(c, "split")) {
+				numHalf = numCols
+				halfSize = rowSize
+			} else {
+				numCols += (!Object.hasOwn(c, "key") && Object.hasOwn(c, "width") ? c.width : 1)
+				rowSize += (Object.hasOwn(c, "width") ? c.width : 1)
+			}
+		}
+
+		const grid = this.box.layout_manager
+		grid.set_row_homogeneous((this.box.height - 40 - grid.get_row_spacing() * (numRows + 1)) / colSize < 28)
+		grid.set_column_homogeneous((this.box.width - 40 - grid.get_column_spacing() * (numCols - 1))  / rowSize < 28 && !layoutName.includes("Split"))
 
         let gridLeft;
         let gridRight;
@@ -758,60 +779,58 @@ class Keyboard extends Dialog {
         let right;
         let topBtnWidth;
 
-        if (layoutName.includes("Split")) {
-            this.box.reactive = false;
-            left = new St.Widget({
-                reactive: true,
-                layout_manager: new Clutter.GridLayout({
-                    orientation: Clutter.Orientation.HORIZONTAL,
-                    row_homogeneous: true,
-                    column_homogeneous: true
-                }),
-                width: Math.round((monitor.width - this.settings.get_int("snap-spacing-px") * 2) * this.widthPercent) / 2
-            })
-            gridLeft = left.layout_manager;
-            let middle = new St.Widget({
-                reactive: false,
-                width: this.box.width * (1 - this.widthPercent) - 10 + this.settings.get_int("border-spacing-px")
-            });
-            right = new St.Widget({
-                reactive: true,
-                layout_manager: new Clutter.GridLayout({
-                    orientation: Clutter.Orientation.HORIZONTAL,
-                    row_homogeneous: true,
-                    column_homogeneous: true
-                }),
-                width: Math.round((monitor.width - this.settings.get_int("snap-spacing-px") * 2) * this.widthPercent) / 2
-            })
-            gridRight = right.layout_manager;
-            this.box.add_child(left)
-            this.box.add_child(middle)
-            this.box.add_child(right)
-        }
+		if (layoutName.includes("Split")) {
+			left = new St.Widget({
+				layout_manager: new Clutter.GridLayout({
+					orientation: Clutter.Orientation.HORIZONTAL,
+					row_spacing: this.settings.get_int("border-spacing-px") * 2,
+					column_spacing: this.settings.get_int("border-spacing-px") * 2,
+				}),
+				width: Math.round((monitor.width - this.settings.get_int("snap-spacing-px") * 2) * this.widthPercent) / 2
+			})
+			gridLeft = left.layout_manager;
+			gridLeft.set_row_homogeneous((left.height - 40 - gridLeft.get_row_spacing() * (numRows + 1)) / colSize < 28)
+			gridLeft.set_column_homogeneous((left.width - 40 - gridLeft.get_column_spacing() * (numHalf - 1))  / halfSize < 28)
+			let middle = new St.Widget({
+				width: this.box.width * (1 - this.widthPercent) - 10 + this.settings.get_int("border-spacing-px")
+			});
+			right = new St.Widget({
+				layout_manager: new Clutter.GridLayout({
+					orientation: Clutter.Orientation.HORIZONTAL,
+					row_spacing: this.settings.get_int("border-spacing-px") * 2,
+					column_spacing: this.settings.get_int("border-spacing-px") * 2,
+				}),
+				width: Math.round((monitor.width - this.settings.get_int("snap-spacing-px") * 2) * this.widthPercent) / 2
+			})
+			gridRight = right.layout_manager;
+			gridRight.set_row_homogeneous((right.height - 40 - gridRight.get_row_spacing() * (numRows + 1)) / colSize < 28)
+			gridRight.set_column_homogeneous((right.width - 40 - gridRight.get_column_spacing() * (numHalf - 1))  / halfSize < 28)
+			this.box.add_child(left)
+			this.box.add_child(middle)
+			this.box.add_child(right)
+		}
 
         this.shiftButtons = [];
         // [insert handwriting 7]
 
-        let currentLayout = layouts[layoutName];
-        let width = 0;
-        for (const c of currentLayout[0]) {
-            width += (Object.hasOwn(c, "width") ? c.width : 1)
-        }
-        let rowSize;
-        let halfSize;
         let r = 0;
         let c;
         const doAddKey = (keydef) => {
             const i = Object.hasOwn(keydef, "key") ? keycodes[keydef.key] : Object.hasOwn(keydef, "split") ? "split" : "empty space";
+            let keyParams = {
+				width: ((left ? left.width : this.box.width) - 40 - currentGrid.get_column_spacing() * ((left ? numHalf : numCols) - 1)) / (left ? halfSize : rowSize),
+				height: (this.box.height - 40 - currentGrid.get_row_spacing() * (numRows + 1)) / colSize
+			}
+			keyParams.translation_x = Math.round((keyParams.width - Math.floor(keyParams.width)) * (left ? halfSize : rowSize) / 2)
+			keyParams.translation_y = Math.round((keyParams.height - Math.floor(keyParams.height)) * colSize / 2)
+			keyParams.width = keyParams.width * (Object.hasOwn(keydef, "width") ? Math.min(keydef.width, 1) : 1)
+			keyParams.height = keyParams.height * (Object.hasOwn(keydef, "height") ? Math.min(keydef.height, 1) : 1)
+
             if (i != null && typeof i !== 'string') {
                 if (i.layers.default == null) {
                     for (var key of Object.keys(i.layers)) {
                         i.layers[key] = i.layers["_" + key]
                     }
-                }
-                let params = {
-                    x_expand: true,
-                    y_expand: true
                 }
 
                 let iconKeys = ["left", "up", "right", "down", "space"]
@@ -820,19 +839,19 @@ class Keyboard extends Dialog {
                 }
                 // [insert handwriting 8]
                 if (iconKeys.some(j => { return i.layers.default.toLowerCase() == j })) {
-                    params.style_class = i.layers.default.toLowerCase() + "_btn"
+                    keyParams.style_class = i.layers.default.toLowerCase() + "_btn"
                     for (var key of Object.keys(i.layers)) {
                         i.layers["_" + key] = i.layers[key]
                         i.layers[key] = null
                     }
                 } else {
-                    params.label = i.layers.default
+                    keyParams.label = i.layers.default
                 }
                 i.isMod = false
                 if ([42, 54, 29, 125, 56, 100, 97, 58, 69].some(j => { return i.code == j })) {
                     i.isMod = true;
                 }
-                const keyBtn = new St.Button(params)
+                const keyBtn = new St.Button(keyParams)
                 keyBtn.add_style_class_name('key')
                 keyBtn.char = i
                 if (i.code == 58) {
@@ -850,17 +869,16 @@ class Keyboard extends Dialog {
                 } else if (i.code == 42 || i.code == 54) {
                     this.shiftButtons.push(keyBtn)
                 }
-                currentGrid.attach(keyBtn, c, 5 + r, (Object.hasOwn(keydef, "width") ? keydef.width : 1) * 2, r == 0 ? 3 : (Object.hasOwn(keydef, "height") ? keydef.height : 1) * 4)
+                currentGrid.attach(keyBtn, c, 5 + r, (Object.hasOwn(keydef, "width") ? keydef.width : 1) * 2, (Object.hasOwn(keydef, "height") ? keydef.height : 1) * 4)
                 keyBtn.visible = true
                 c += (Object.hasOwn(keydef, "width") ? keydef.width : 1) * 2
                 this.keys.push(keyBtn)
                 // [insert handwriting 9]
             } else if (i == "empty space") {
+                currentGrid.attach(new St.Button(keyParams), c, 5 + r, (Object.hasOwn(keydef, "width") ? keydef.width : 1) * 2, (Object.hasOwn(keydef, "height") ? keydef.height : 1) * 4)
                 c += (Object.hasOwn(keydef, "width") ? keydef.width : 1) * 2
             } else if (i == "split") {
                 currentGrid = gridRight
-                const size = c
-                if (!halfSize) halfSize = size
             }
         }
 
@@ -879,10 +897,17 @@ class Keyboard extends Dialog {
                 }
             }
             if (!topBtnWidth) topBtnWidth = ((Object.hasOwn(kRow[kRow.length - 1], "width") && (Object.hasOwn(kRow[kRow.length - 1], "key"))) ? kRow[kRow.length - 1].width : 1)
-            const size = c;
-            if (!rowSize) rowSize = size;
-            r += r == 0 ? 3 : 4
+            r += (Object.hasOwn(kRow[0], "height") ? kRow[0].height : 1) * 2;
         }
+
+        let rowSpan = rowSize * 8;
+		let halfSpan = halfSize * 8;
+		let handleParams = {
+			width: ((left ? left.width : this.box.width) - 40 - currentGrid.get_column_spacing() * ((left ? numHalf : numCols) - 1)) / (left ? halfSize : rowSize),
+			height: (this.box.height - 40 - currentGrid.get_row_spacing() * (numRows + 1)) / colSize * 0.625
+		}
+		handleParams.translation_x = Math.round((handleParams.width - Math.floor(handleParams.width)) * (left ? halfSize : rowSize) / 2)
+		handleParams.translation_y = Math.round((handleParams.height - Math.floor(handleParams.height)) * colSize / 2)
 
         if (left != null) {
             this.set_reactive(false)
@@ -907,10 +932,7 @@ class Keyboard extends Dialog {
                 left.add_style_class_name("regular");
                 right.add_style_class_name("regular");
             }
-            const settingsBtn = new St.Button({
-                x_expand: true,
-                y_expand: true
-            })
+            const settingsBtn = new St.Button(handleParams)
             settingsBtn.add_style_class_name("settings_btn")
             settingsBtn.add_style_class_name("key")
             settingsBtn.connect("clicked", () => {
@@ -919,10 +941,7 @@ class Keyboard extends Dialog {
             gridLeft.attach(settingsBtn, 0, 0, 2 * topBtnWidth, 3)
             this.keys.push(settingsBtn)
 
-            const closeBtn = new St.Button({
-                x_expand: true,
-                y_expand: true
-            })
+            const closeBtn = new St.Button(handleParams)
             closeBtn.add_style_class_name("close_btn")
             closeBtn.add_style_class_name("key")
             closeBtn.connect("clicked", () => {
@@ -932,10 +951,7 @@ class Keyboard extends Dialog {
             gridRight.attach(closeBtn, (rowSize - 2 * topBtnWidth), 0, 2 * topBtnWidth, 3)
             this.keys.push(closeBtn)
 
-            let moveHandleLeft = new St.Button({
-                x_expand: true,
-                y_expand: true
-            })
+            let moveHandleLeft = new St.Button(handleParams)
             moveHandleLeft.add_style_class_name("moveHandle")
             moveHandleLeft.set_style("font-size: " + this.settings.get_int("font-size-px") + "px; border-radius: " + (this.settings.get_boolean("round-key-corners") ? "5px;" : "0;") + "background-size: " + this.settings.get_int("font-size-px") + "px; font-weight: " + (this.settings.get_boolean("font-bold") ? "bold" : "normal") + "; border: " + this.settings.get_int("border-spacing-px") + "px solid transparent;");
             if (this.lightOrDark()) {
@@ -950,12 +966,9 @@ class Keyboard extends Dialog {
                 }
                 this.event(event, false)
             })
-            gridLeft.attach(moveHandleLeft, 2 * topBtnWidth, 0, (halfSize - 2 * topBtnWidth), 3)
+            gridLeft.attach(moveHandleLeft, 2 * topBtnWidth, 0, (halfSpan - 2 * topBtnWidth), 3)
 
-            let moveHandleRight = new St.Button({
-                x_expand: true,
-                y_expand: true
-            })
+            let moveHandleRight = new St.Button(handleParams)
             moveHandleRight.add_style_class_name("moveHandle")
             moveHandleRight.set_style("font-size: " + this.settings.get_int("font-size-px") + "px; border-radius: " + (this.settings.get_boolean("round-key-corners") ? "5px;" : "0;") + "background-size: " + this.settings.get_int("font-size-px") + "px; font-weight: " + (this.settings.get_boolean("font-bold") ? "bold" : "normal") + "; border: " + this.settings.get_int("border-spacing-px") + "px solid transparent;");
             if (this.lightOrDark()) {
@@ -970,9 +983,9 @@ class Keyboard extends Dialog {
                 }
                 this.event(event, false)
             })
-            gridRight.attach(moveHandleRight, halfSize, 0, (rowSize - halfSize - 2 * topBtnWidth), 3)
-            gridLeft.attach(new St.Widget({ x_expand: true, y_expand: true }), 0, 3, halfSize, 1)
-            gridRight.attach(new St.Widget({ x_expand: true, y_expand: true }), halfSize, 3, (rowSize - halfSize), 1)
+            gridRight.attach(moveHandleRight, halfSize, 0, (rowSpan - halfSpan - 2 * topBtnWidth), 3)
+            gridLeft.attach(new St.Widget({ width: rowSize - halfSize, height: 1 }), 0, 3, halfSpan, 1)
+            gridRight.attach(new St.Widget({ width: rowSize - halfSize, height: 1 }), halfSpan, 3, (rowSpan - halfSpan), 1)
         } else {
             this.box.add_style_class_name("boxLay");
             if (this.settings.get_boolean("system-accent-col") && major >= 47) {
@@ -990,10 +1003,7 @@ class Keyboard extends Dialog {
                 this.box.add_style_class_name("regular");
             }
 
-            const settingsBtn = new St.Button({
-                x_expand: true,
-                y_expand: true
-            })
+            const settingsBtn = new St.Button(handleParams)
             settingsBtn.add_style_class_name("settings_btn")
             settingsBtn.add_style_class_name("key")
             settingsBtn.connect("clicked", () => {
@@ -1002,25 +1012,19 @@ class Keyboard extends Dialog {
             grid.attach(settingsBtn, 0, 0, 2 * topBtnWidth, 3)
             this.keys.push(settingsBtn)
 
-            const closeBtn = new St.Button({
-                x_expand: true,
-                y_expand: true
-            })
+            const closeBtn = new St.Button(handleParams)
             closeBtn.add_style_class_name("close_btn")
             closeBtn.add_style_class_name("key")
             closeBtn.connect("clicked", () => {
                 this.close();
                 this.closedFromButton = true;
             })
-            grid.attach(closeBtn, (rowSize - 2 * topBtnWidth), 0, 2 * topBtnWidth, 3)
+            grid.attach(closeBtn, (rowSpan - 2 * topBtnWidth), 0, 2 * topBtnWidth, 3)
             this.keys.push(closeBtn)
 
             // [insert handwriting 10]
 
-            let moveHandle = new St.Button({
-                x_expand: true,
-                y_expand: true
-            })
+            let moveHandle = new St.Button(handleParams)
             moveHandle.add_style_class_name("moveHandle")
             moveHandle.set_style("font-size: " + this.settings.get_int("font-size-px") + "px; border-radius: " + (this.settings.get_boolean("round-key-corners") ? "5px;" : "0;") + "background-size: " + this.settings.get_int("font-size-px") + "px; font-weight: " + (this.settings.get_boolean("font-bold") ? "bold" : "normal") + "; border: " + this.settings.get_int("border-spacing-px") + "px solid transparent;");
             if (this.lightOrDark()) {
@@ -1035,8 +1039,8 @@ class Keyboard extends Dialog {
                 }
                 this.event(event, false)
             })
-            grid.attach(moveHandle, 2 * topBtnWidth, 0, (rowSize - 4 * topBtnWidth), 3) // [insert handwriting 11]
-            grid.attach(new St.Widget({ x_expand: true, y_expand: true }), 0, 3, rowSize, 1)
+            grid.attach(moveHandle, 2 * topBtnWidth, 0, (rowSpan - 4 * topBtnWidth), 3) // [insert handwriting 11]
+            grid.attach(new St.Widget({ width: rowSize, height: 1 }), 0, 3, rowSpan, 1)
         }
 
         this.keys.forEach(item => {
