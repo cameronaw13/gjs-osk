@@ -9,6 +9,10 @@
         "47",
         "48"
     ],
+    "session-modes": [
+      "user",
+      "unlock-dialog"
+    ],
     "url": "https://github.com/Vishram1123/gjs-osk",
     "uuid": "gjsosk@vishram1123.com",
     "version": 100000
